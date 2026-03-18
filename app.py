@@ -55,6 +55,7 @@ async def root():
             "/": "This info",
             "/docs": "API Documentation",
             "/scrape": "Search prices by keyword",
+            "/detect": "Detect objects with bounding boxes (lightweight)",
             "/detect_and_appraise": "Detect objects and get price estimates",
             "/appraise": "Get detailed price appraisal from multiple sources",
         },
@@ -201,6 +202,48 @@ async def detect_and_appraise(request: ImageRequest):
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "model_loaded": model is not None}
+
+
+@app.post("/detect")
+async def detect(request: ImageRequest):
+    """
+    Lightweight endpoint that only performs object detection.
+    Returns detections with bounding boxes without price appraisal.
+    """
+    try:
+        # Decode the base64 image
+        image_bytes = base64.b64decode(request.image_base64)
+        image = Image.open(BytesIO(image_bytes))
+
+        # Perform object detection with YOLOv8
+        results = model(image)
+        detections = []
+
+        for r in results:
+            for box in r.boxes:
+                class_id = int(box.cls[0])
+                label = model.names[class_id]
+                confidence = float(box.conf[0])
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                detections.append(
+                    {
+                        "label": label,
+                        "confidence": round(confidence, 2),
+                        "box": [x1, y1, x2, y2],
+                    }
+                )
+
+        return {
+            "detections": detections,
+            "num_detections": len(detections),
+            "message": f"Found {len(detections)} objects" if detections else "No objects detected",
+        }
+
+    except Exception as e:
+        print(f"Error in /detect: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
