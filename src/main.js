@@ -3,7 +3,7 @@ import "./style.css";
 
 let stream = null;
 let capturedBase64 = null;
-const API_BASE = "http://10.66.186.148:8000";
+const API_BASE = "http://localhost:8000";
 
 // Real-time detection variables
 let detectionInterval = null;
