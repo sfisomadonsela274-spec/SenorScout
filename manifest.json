@@ -1,0 +1,50 @@
+{
+  "name": "SenorScout - AI Price Scanner",
+  "short_name": "SenorScout",
+  "description": "AI-Powered Price Scanner - Detect objects and get real-time price estimates",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#00d4ff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "utilities", "lifestyle"],
+  "screenshots": [
+    {
+      "src": "screenshot.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan Item",
+      "short_name": "Scan",
+      "description": "Open camera to scan an item",
+      "url": "/?action=scan",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Search Prices",
+      "short_name": "Search",
+      "description": "Search for item prices",
+      "url": "/?action=search",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

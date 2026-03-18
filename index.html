@@ -304,7 +304,34 @@
                         Tap "Start Camera" to begin
                     </div>
                     <video id="videoPreview" autoplay playsinline></video>
+                    <canvas
+                        id="detectionCanvas"
+                        style="
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            pointer-events: none;
+                        "
+                    ></canvas>
                     <img id="capturedImage" alt="Captured frame" />
+                    <div
+                        id="detectionStatus"
+                        style="
+                            display: none;
+                            position: absolute;
+                            top: 10px;
+                            left: 10px;
+                            background: rgba(0, 0, 0, 0.7);
+                            color: white;
+                            padding: 5px 10px;
+                            border-radius: 5px;
+                            font-size: 12px;
+                        "
+                    >
+                        🔍 Scanning...
+                    </div>
 
                     <div class="button-group">
                         <button
@@ -403,6 +430,14 @@
             let stream = null;
             let capturedBase64 = null;
             const API_BASE = "http://10.66.186.148:8000";
+
+            // Real-time detection variables
+            let detectionInterval = null;
+            let isDetecting = false;
+            let lastDetectionTime = 0;
+            const DETECTION_INTERVAL = 1000; // Detect every 1 second
+            const AUTO_CAPTURE_CONFIDENCE = 0.85; // Auto-capture threshold
+            let hasAutoCaptured = false;
 
             // Tab switching
             function switchTab(tabName) {

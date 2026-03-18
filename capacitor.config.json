@@ -1,0 +1,6 @@
+{
+  "appId": "com.senorscout.app",
+  "appName": "SenorScout",
+  "webDir": "public",
+  "bundledWebRuntime": false
+}
