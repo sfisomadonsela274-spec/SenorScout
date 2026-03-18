@@ -1,0 +1,25 @@
+{
+  "name": "senorscout",
+  "version": "1.0.0",
+  "description": "An AR (Augmented Reality) scout system that uses machine learning to detect objects through your phone camera and provides real-time price estimates by scraping multiple online marketplaces.",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sfisomadonsela274-spec/SenorScout.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sfisomadonsela274-spec/SenorScout/issues"
+  },
+  "homepage": "https://github.com/sfisomadonsela274-spec/SenorScout#readme",
+  "devDependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0"
+  }
+}

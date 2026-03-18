@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>SenorScout - AR Price Scanner</title>
+
+        <!-- PWA Meta Tags -->
+        <meta name="theme-color" content="#00d4ff" />
+        <meta
+            name="description"
+            content="AI-Powered Price Scanner - Detect objects and get real-time price estimates"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="SenorScout" />
+
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="manifest.json" />
+        <link rel="apple-touch-icon" href="icon-192.png" />
+
+        <!-- PWA Service Worker -->
+        <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker
+                        .register("sw.js")
+                        .then((reg) => console.log("SW registered:", reg))
+                        .catch((err) =>
+                            console.log("SW registration failed:", err),
+                        );
+                });
+            }
+        </script>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #1a1a2e;
+                color: #eee;
+                min-height: 100vh;
+            }
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            h1 {
+                text-align: center;
+                color: #00d4ff;
+                margin-bottom: 10px;
+            }
+            .subtitle {
+                text-align: center;
+                color: #888;
+                margin-bottom: 20px;
+                font-size: 14px;
+            }
+            .camera-section {
+                background: #16213e;
+                border-radius: 12px;
+                padding: 15px;
+                margin-bottom: 20px;
+                overflow: hidden;
+            }
+            #videoPreview {
+                width: 100%;
+                height: 300px;
+                object-fit: cover;
+                border-radius: 8px;
+                background: #0f0f23;
+                display: none;
+            }
+            #capturedImage {
+                width: 100%;
+                height: 300px;
+                object-fit: cover;
+                border-radius: 8px;
+                background: #0f0f23;
+                display: none;
+            }
+            .placeholder {
+                width: 100%;
+                height: 300px;
+                background: #0f0f23;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #555;
+                font-size: 16px;
+            }
+            .button-group {
+                display: flex;
+                gap: 10px;
+                margin-top: 15px;
+                flex-wrap: wrap;
+            }
+            button {
+                flex: 1;
+                min-width: 120px;
+                padding: 14px 20px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+            .btn-primary {
+                background: linear-gradient(135deg, #00d4ff, #0099cc);
+                color: white;
+            }
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+            }
+            .btn-secondary {
+                background: #2d3a5f;
+                color: white;
+            }
+            .btn-secondary:hover {
+                background: #3d4a6f;
+            }
+            .btn-capture {
+                background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+                color: white;
+                font-size: 18px;
+            }
+            .btn-capture:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            }
+            .btn-capture:disabled {
+                background: #555;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+            .tabs {
+                display: flex;
+                margin-bottom: 15px;
+                background: #0f0f23;
+                border-radius: 8px;
+                padding: 4px;
+            }
+            .tab {
+                flex: 1;
+                padding: 10px;
+                text-align: center;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .tab.active {
+                background: #00d4ff;
+                color: white;
+            }
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
+            .results {
+                background: #16213e;
+                border-radius: 12px;
+                padding: 20px;
+                margin-top: 20px;
+            }
+            .results h2 {
+                color: #00d4ff;
+                margin-top: 0;
+                font-size: 18px;
+            }
+            .detection-item {
+                margin-bottom: 12px;
+                padding: 15px;
+                background: #1e2a4a;
+                border-radius: 8px;
+                border-left: 4px solid #00d4ff;
+            }
+            .appraisal-item {
+                margin-bottom: 12px;
+                padding: 15px;
+                background: #1e3a2a;
+                border-radius: 8px;
+                border-left: 4px solid #00ff88;
+            }
+            .detection-item strong,
+            .appraisal-item strong {
+                color: #fff;
+            }
+            .loading {
+                text-align: center;
+                padding: 20px;
+                color: #00d4ff;
+            }
+            .loading::after {
+                content: "";
+                animation: dots 1.5s infinite;
+            }
+            @keyframes dots {
+                0%,
+                20% {
+                    content: ".";
+                }
+                40% {
+                    content: "..";
+                }
+                60%,
+                100% {
+                    content: "...";
+                }
+            }
+            .error {
+                background: #3a1e1e;
+                border-left: 4px solid #ff6b6b;
+                padding: 15px;
+                border-radius: 8px;
+                color: #ff6b6b;
+            }
+            .status-bar {
+                background: #0f0f23;
+                padding: 10px 15px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .status-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #ff6b6b;
+            }
+            .status-dot.active {
+                background: #00ff88;
+            }
+            input[type="file"] {
+                display: none;
+            }
+            .file-label {
+                display: block;
+                padding: 14px 20px;
+                background: #2d3a5f;
+                border-radius: 8px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .file-label:hover {
+                background: #3d4a6f;
+            }
+            .keyword-input {
+                width: 100%;
+                padding: 14px;
+                border: 2px solid #2d3a5f;
+                border-radius: 8px;
+                background: #0f0f23;
+                color: white;
+                font-size: 16px;
+                margin-bottom: 15px;
+            }
+            .keyword-input:focus {
+                outline: none;
+                border-color: #00d4ff;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📸 SenorScout</h1>
+            <p class="subtitle">AI-Powered Price Scanner</p>
+
+            <div class="status-bar">
+                <div class="status-dot" id="cameraStatus"></div>
+                <span id="cameraStatusText">Camera not initialized</span>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('camera')">
+                    📷 Camera
+                </div>
+                <div class="tab" onclick="switchTab('upload')">📁 Upload</div>
+                <div class="tab" onclick="switchTab('search')">🔍 Search</div>
+            </div>
+
+            <!-- Camera Tab -->
+            <div class="tab-content active" id="cameraTab">
+                <div class="camera-section">
+                    <div class="placeholder" id="cameraPlaceholder">
+                        Tap "Start Camera" to begin
+                    </div>
+                    <video id="videoPreview" autoplay playsinline></video>
+                    <img id="capturedImage" alt="Captured frame" />
+
+                    <div class="button-group">
+                        <button
+                            class="btn-primary"
+                            id="startCameraBtn"
+                            onclick="startCamera()"
+                        >
+                            📷 Start Camera
+                        </button>
+                        <button
+                            class="btn-capture"
+                            id="captureBtn"
+                            onclick="captureImage()"
+                            disabled
+                        >
+                            ⏺ Capture
+                        </button>
+                        <button
+                            class="btn-secondary"
+                            id="stopCameraBtn"
+                            onclick="stopCamera()"
+                            style="display: none"
+                        >
+                            ⏹ Stop Camera
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Tab -->
+            <div class="tab-content" id="uploadTab">
+                <div class="camera-section">
+                    <label class="file-label" for="imageInput">
+                        📁 Tap to select an image
+                    </label>
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/*"
+                        onchange="handleFileSelect(event)"
+                    />
+
+                    <img
+                        id="uploadedPreview"
+                        style="
+                            width: 100%;
+                            max-height: 300px;
+                            object-fit: cover;
+                            border-radius: 8px;
+                            margin-top: 15px;
+                            display: none;
+                        "
+                    />
+
+                    <div class="button-group">
+                        <button
+                            class="btn-primary"
+                            onclick="uploadSelectedImage()"
+                        >
+                            🔍 Detect & Appraise
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Tab -->
+            <div class="tab-content" id="searchTab">
+                <div class="camera-section">
+                    <input
+                        type="text"
+                        class="keyword-input"
+                        id="keywordInput"
+                        placeholder="Enter item name (e.g., iPhone 13, Nike shoes)"
+                    />
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="searchByKeyword()">
+                            🔍 Search Prices
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results" id="resultsSection" style="display: none">
+                <h2>📊 Results</h2>
+
+                <h3>🔍 Detected Objects</h3>
+                <div id="detectionResults"></div>
+
+                <h3>💰 Price Appraisal</h3>
+                <div id="appraisalResults"></div>
+            </div>
+        </div>
+
+        <script>
+            let stream = null;
+            let capturedBase64 = null;
+            const API_BASE = "https://10.66.186.148:8000";
+
+            // Tab switching
+            function switchTab(tabName) {
+                document
+                    .querySelectorAll(".tab")
+                    .forEach((t) => t.classList.remove("active"));
+                document
+                    .querySelectorAll(".tab-content")
+                    .forEach((c) => c.classList.remove("active"));
+
+                if (tabName === "camera") {
+                    document
+                        .querySelectorAll(".tab")[0]
+                        .classList.add("active");
+                    document
+                        .getElementById("cameraTab")
+                        .classList.add("active");
+                } else if (tabName === "upload") {
+                    document
+                        .querySelectorAll(".tab")[1]
+                        .classList.add("active");
+                    document
+                        .getElementById("uploadTab")
+                        .classList.add("active");
+                } else if (tabName === "search") {
+                    document
+                        .querySelectorAll(".tab")[2]
+                        .classList.add("active");
+                    document
+                        .getElementById("searchTab")
+                        .classList.add("active");
+                }
+            }
+
+            // Camera functions
+            async function startCamera() {
+                const video = document.getElementById("videoPreview");
+                const placeholder =
+                    document.getElementById("cameraPlaceholder");
+                const startBtn = document.getElementById("startCameraBtn");
+                const captureBtn = document.getElementById("captureBtn");
+                const stopBtn = document.getElementById("stopCameraBtn");
+                const statusDot = document.getElementById("cameraStatus");
+                const statusText = document.getElementById("cameraStatusText");
+
+                try {
+                    // Prefer back camera on mobile devices
+                    const constraints = {
+                        video: {
+                            facingMode: { ideal: "environment" },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                        },
+                    };
+
+                    stream =
+                        await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream;
+                    video.style.display = "block";
+                    placeholder.style.display = "none";
+                    startBtn.style.display = "none";
+                    captureBtn.disabled = false;
+                    captureBtn.style.display = "block";
+                    stopBtn.style.display = "block";
+
+                    statusDot.classList.add("active");
+                    statusText.textContent = "Camera active";
+                } catch (err) {
+                    console.error("Camera error:", err);
+                    alert(
+                        "Could not access camera: " +
+                            err.message +
+                            "\n\nPlease ensure camera permissions are granted.",
+                    );
+                }
+            }
+
+            function stopCamera() {
+                const video = document.getElementById("videoPreview");
+                const startBtn = document.getElementById("startCameraBtn");
+                const captureBtn = document.getElementById("captureBtn");
+                const stopBtn = document.getElementById("stopCameraBtn");
+                const statusDot = document.getElementById("cameraStatus");
+                const statusText = document.getElementById("cameraStatusText");
+
+                if (stream) {
+                    stream.getTracks().forEach((track) => track.stop());
+                    stream = null;
+                }
+
+                video.style.display = "none";
+                video.srcObject = null;
+                startBtn.style.display = "block";
+                captureBtn.disabled = true;
+                captureBtn.style.display = "none";
+                stopBtn.style.display = "none";
+
+                statusDot.classList.remove("active");
+                statusText.textContent = "Camera stopped";
+            }
+
+            function captureImage() {
+                const video = document.getElementById("videoPreview");
+                const capturedImg = document.getElementById("capturedImage");
+
+                // Create canvas to capture frame
+                const canvas = document.createElement("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Convert to base64
+                capturedBase64 = canvas
+                    .toDataURL("image/jpeg", 0.8)
+                    .split(",")[1];
+
+                // Show captured image
+                capturedImg.src = canvas.toDataURL("image/jpeg", 0.8);
+                capturedImg.style.display = "block";
+                video.style.display = "none";
+
+                // Automatically analyze
+                analyzeImage(capturedBase64);
+            }
+
+            // File upload functions
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        document.getElementById("uploadedPreview").src =
+                            e.target.result;
+                        document.getElementById(
+                            "uploadedPreview",
+                        ).style.display = "block";
+                        capturedBase64 = e.target.result.split(",")[1];
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            function uploadSelectedImage() {
+                if (!capturedBase64) {
+                    alert("Please select an image first");
+                    return;
+                }
+                analyzeImage(capturedBase64);
+            }
+
+            // Search function
+            async function searchByKeyword() {
+                const keyword = document
+                    .getElementById("keywordInput")
+                    .value.trim();
+                if (!keyword) {
+                    alert("Please enter a keyword");
+                    return;
+                }
+
+                showLoading("Searching for prices...");
+
+                try {
+                    const response = await fetch(`${API_BASE}/scrape`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ keyword: keyword }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(
+                            `HTTP error! status: ${response.status}`,
+                        );
+                    }
+
+                    const data = await response.json();
+                    displaySearchResults(data);
+                } catch (error) {
+                    console.error("Error:", error);
+                    showError("Search failed: " + error.message);
+                }
+            }
+
+            function displaySearchResults(data) {
+                const resultsSection =
+                    document.getElementById("resultsSection");
+                const detectionResults =
+                    document.getElementById("detectionResults");
+                const appraisalResults =
+                    document.getElementById("appraisalResults");
+
+                resultsSection.style.display = "block";
+                detectionResults.innerHTML =
+                    '<p style="color: #888;">Manual search - no object detection</p>';
+
+                if (data.average_price) {
+                    appraisalResults.innerHTML = `
+                    <div class="appraisal-item">
+                        <strong>${data.keyword}</strong><br>
+                        Listings Found: ${data.num_listings}<br>
+                        <strong style="color: #00ff88; font-size: 24px;">${data.currency}${data.average_price}</strong> (average)
+                    </div>
+                `;
+                } else {
+                    appraisalResults.innerHTML =
+                        '<p style="color: #888;">No price data found</p>';
+                }
+            }
+
+            // Main analysis function
+            async function analyzeImage(base64Image) {
+                showLoading("Analyzing image and fetching prices...");
+
+                try {
+                    const response = await fetch(
+                        `${API_BASE}/detect_and_appraise`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ image_base64: base64Image }),
+                        },
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(
+                            `HTTP error! status: ${response.status}`,
+                        );
+                    }
+
+                    const data = await response.json();
+                    displayResults(data);
+                } catch (error) {
+                    console.error("Error:", error);
+                    showError(
+                        "Analysis failed: " +
+                            error.message +
+                            "\n\nMake sure the backend server is running on localhost:8000",
+                    );
+                }
+            }
+
+            function displayResults(data) {
+                const resultsSection =
+                    document.getElementById("resultsSection");
+                const detectionResults =
+                    document.getElementById("detectionResults");
+                const appraisalResults =
+                    document.getElementById("appraisalResults");
+
+                resultsSection.style.display = "block";
+
+                // Display detections
+                if (data.detections && data.detections.length > 0) {
+                    detectionResults.innerHTML = data.detections
+                        .map(
+                            (d) => `
+                    <div class="detection-item">
+                        <strong>${d.label}</strong> (${Math.round(d.confidence * 100)}% confidence)
+                    </div>
+                `,
+                        )
+                        .join("");
+                } else {
+                    detectionResults.innerHTML =
+                        '<p style="color: #888;">No objects detected</p>';
+                }
+
+                // Display appraisal
+                if (
+                    data.appraisal_summary &&
+                    data.appraisal_summary.length > 0
+                ) {
+                    appraisalResults.innerHTML = data.appraisal_summary
+                        .map(
+                            (a) => `
+                    <div class="appraisal-item">
+                        <strong>${a.keyword}</strong><br>
+                        ${a.num_listings} sold listings found<br>
+                        <strong style="color: #00ff88; font-size: 20px;">${a.currency}${a.average_price}</strong> (average)
+                    </div>
+                `,
+                        )
+                        .join("");
+                } else {
+                    appraisalResults.innerHTML =
+                        '<p style="color: #888;">No price data found for detected objects</p>';
+                }
+            }
+
+            function showLoading(message) {
+                const resultsSection =
+                    document.getElementById("resultsSection");
+                resultsSection.style.display = "block";
+                document.getElementById("detectionResults").innerHTML =
+                    `<div class="loading">${message}</div>`;
+                document.getElementById("appraisalResults").innerHTML = "";
+            }
+
+            function showError(message) {
+                const resultsSection =
+                    document.getElementById("resultsSection");
+                resultsSection.style.display = "block";
+                document.getElementById("detectionResults").innerHTML =
+                    `<div class="error">${message}</div>`;
+                document.getElementById("appraisalResults").innerHTML = "";
+            }
+
+            // Check if backend is available on load
+            window.addEventListener("load", async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/docs`, {
+                        method: "HEAD",
+                    });
+                    if (response.ok) {
+                        document.getElementById(
+                            "cameraStatusText",
+                        ).textContent = "Backend connected";
+                        document
+                            .getElementById("cameraStatus")
+                            .classList.add("active");
+                    }
+                } catch (err) {
+                    document.getElementById("cameraStatusText").textContent =
+                        "Backend not connected";
+                }
+            });
+        </script>
+    </body>
+</html>
